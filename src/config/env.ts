@@ -22,7 +22,7 @@ function requireEnv(name: string): string {
 
 export const appEnv = {
   port: Number(process.env.PORT ?? 8787),
-  /** WebSocket `GET /ws?key=...`，必须在 .env 中设置 WS_KEY */
+  /** HTTP 头 `X-Agent-Key`，与扩展 `padExpandAgentSecret` 一致；必须在 .env 中设置 WS_KEY */
   wsKey: requireEnv("WS_KEY"),
   /** 未设置 OPENAI_BASE_URL 时使用 OpenAI 官方接口；国内厂商需同时配置 Base URL */
   openAiBaseUrl: process.env.OPENAI_BASE_URL?.trim() || undefined,
