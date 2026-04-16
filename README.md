@@ -23,28 +23,33 @@ bun run dev
 
 ## 2. API
 
-- `POST /chat/start`：创建会话，返回首条引导语。
-- `POST /chat/turn`：推进一轮对话。
+- `POST /chat/start`：创建会话，成功时响应 **SSE**（`Content-Type: text/event-stream`），正文为单行 `data: <JSON>\n\n`，字段与原先 JSON 一致（`sessionId`、`reply`、`state` 等）。
+- `POST /chat/turn`：推进一轮对话，成功时同样为 **SSE** `data:` 单行 JSON（`status`、`reply`、`normalized` 等）。校验失败仍为 `application/json` 错误体。
 - `GET /chat/:sessionId/state`：查看会话状态（调试）。
-- `POST /chat/:sessionId/confirm`：快捷确认（等价发送“确认”）。
+- `POST /chat/:sessionId/confirm`：快捷确认（等价发送“确认”），仍为 JSON。
 
 ### 示例：创建会话
 
 ```bash
-curl -X POST http://127.0.0.1:8787/chat/start
+curl -s -X POST http://127.0.0.1:8787/chat/start \
+  -H "content-type: application/json" \
+  -H "accept: text/event-stream" \
+  -d "{}"
 ```
 
 ### 示例：对话推进
 
 ```bash
-curl -X POST http://127.0.0.1:8787/chat/turn \
+curl -s -X POST http://127.0.0.1:8787/chat/turn \
   -H "content-type: application/json" \
+  -H "accept: text/event-stream" \
   -d "{\"sessionId\":\"<sessionId>\",\"input\":\"阻焊区域，外扩0.12mm，连续生成\"}"
 ```
 
 ```bash
-curl -X POST http://127.0.0.1:8787/chat/turn \
+curl -s -X POST http://127.0.0.1:8787/chat/turn \
   -H "content-type: application/json" \
+  -H "accept: text/event-stream" \
   -d "{\"sessionId\":\"<sessionId>\",\"input\":\"确认\"}"
 ```
 
