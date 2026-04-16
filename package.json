@@ -7,6 +7,7 @@
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
     "typecheck": "tsc --noEmit",
+    "test:smoke": "bun scripts/api-smoke.ts",
     "eval": "bun scripts/eval.ts",
     "ngrok": "C:/Users/yujie/Downloads/ngrok-v3-stable-windows-amd64/ngrok.exe http 8787"
   },

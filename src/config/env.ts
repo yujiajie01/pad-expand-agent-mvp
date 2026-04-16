@@ -9,8 +9,21 @@ function parseBoolean(raw: string | undefined, fallback = false): boolean {
   return truthyValues.has(raw.trim().toLowerCase());
 }
 
+/** 敏感配置只从环境变量读取，勿在代码里写默认值 */
+function requireEnv(name: string): string {
+  const v = process.env[name]?.trim();
+  if (!v) {
+    throw new Error(
+      `[config] 缺少环境变量 ${name}。请复制 .env.example 为 .env 并填写（不要将 .env 提交到 Git）。`,
+    );
+  }
+  return v;
+}
+
 export const appEnv = {
   port: Number(process.env.PORT ?? 8787),
+  /** WebSocket `GET /ws?key=...`，必须在 .env 中设置 WS_KEY */
+  wsKey: requireEnv("WS_KEY"),
   /** 未设置 OPENAI_BASE_URL 时使用 OpenAI 官方接口；国内厂商需同时配置 Base URL */
   openAiBaseUrl: process.env.OPENAI_BASE_URL?.trim() || undefined,
   openAiModel: process.env.OPENAI_MODEL ?? "deepseek-chat",
