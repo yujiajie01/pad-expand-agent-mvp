@@ -11,7 +11,9 @@ function parseBoolean(raw: string | undefined, fallback = false): boolean {
 
 export const appEnv = {
   port: Number(process.env.PORT ?? 8787),
-  openAiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+  /** 未设置 OPENAI_BASE_URL 时使用 OpenAI 官方接口；国内厂商需同时配置 Base URL */
+  openAiBaseUrl: process.env.OPENAI_BASE_URL?.trim() || undefined,
+  openAiModel: process.env.OPENAI_MODEL ?? "deepseek-chat",
   tracingEnabled:
     parseBoolean(process.env.LANGSMITH_TRACING, false) ||
     parseBoolean(process.env.LANGCHAIN_TRACING_V2, false),

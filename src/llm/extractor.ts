@@ -1,5 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
+import { appEnv } from "../config/env";
 import {
   normalizeOutputKind,
   parseContinuous,
@@ -69,8 +70,11 @@ export async function extractFieldsFromText(text: string): Promise<ExtractedFiel
 
   try {
     const model = new ChatOpenAI({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      model: appEnv.openAiModel,
       temperature: 0,
+      ...(appEnv.openAiBaseUrl && {
+        configuration: { baseURL: appEnv.openAiBaseUrl },
+      }),
     });
     const extractor = model.withStructuredOutput(extractionSchema, {
       name: "pad_expansion_params",
