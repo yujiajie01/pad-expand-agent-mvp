@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { appEnv, ensureTracingDefaults } from "./config/env";
 import { createAgentGraph } from "./graph/agentGraph";
 import { createInitialState } from "./graph/state";
@@ -7,6 +8,14 @@ import { MemorySessionStore } from "./session/memoryStore";
 ensureTracingDefaults();
 
 const app = new Hono();
+app.use(
+  "/*",
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+  }),
+);
 const graph = createAgentGraph();
 const store = new MemorySessionStore();
 
