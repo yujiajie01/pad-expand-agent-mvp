@@ -26,6 +26,14 @@ const extractionSchema = z.object({
 
 const confirmRegex = /(确认|就这样|可以执行|没问题|ok|okay|yes|是的|对的)/i;
 
+/** 仅「确认」等短句时不调模型，避免模型胡填 continuous 覆盖多轮已收集的槽位 */
+function isConfirmOnlyMessage(text: string): boolean {
+  const t = text.trim();
+  if (!confirmRegex.test(t)) return false;
+  const stripped = t.replace(confirmRegex, "").replace(/[，,。.\s]/g, "");
+  return stripped.length === 0;
+}
+
 function regexExtract(text: string): ExtractedFields {
   const lower = text.toLowerCase();
   const result: ExtractedFields = {};
@@ -62,10 +70,29 @@ function regexExtract(text: string): ExtractedFields {
   return result;
 }
 
+/** 多轮里「连续模式关掉」等句同时含「连续」与否定词，模型易误判；规则能确定时覆盖 LLM。 */
+function mergeContinuousFromText(
+  text: string,
+  llm: boolean | null | undefined,
+): boolean | undefined {
+  const fromRules = parseContinuous(text);
+  if (typeof fromRules === "boolean") {
+    return fromRules;
+  }
+  if (typeof llm === "boolean") {
+    return llm;
+  }
+  return undefined;
+}
+
 export async function extractFieldsFromText(text: string): Promise<ExtractedFields> {
   const hasModelKey = Boolean(process.env.OPENAI_API_KEY);
   if (!hasModelKey) {
     return regexExtract(text);
+  }
+
+  if (isConfirmOnlyMessage(text)) {
+    return { userConfirmed: true };
   }
 
   try {
@@ -88,7 +115,7 @@ export async function extractFieldsFromText(text: string): Promise<ExtractedFiel
       outputKind: structured.outputKind ?? undefined,
       expValue: structured.expValue ?? undefined,
       unit: structured.unit ?? undefined,
-      continuous: structured.continuous ?? undefined,
+      continuous: mergeContinuousFromText(text, structured.continuous),
       userConfirmed: structured.userConfirmed ?? undefined,
     };
   } catch {
