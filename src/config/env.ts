@@ -31,6 +31,14 @@ export const appEnv = {
     parseBoolean(process.env.LANGSMITH_TRACING, false) ||
     parseBoolean(process.env.LANGCHAIN_TRACING_V2, false),
   hasLangsmithKey: Boolean(process.env.LANGSMITH_API_KEY),
+  // Langfuse
+  langfusePublicKey: process.env.LANGFUSE_PUBLIC_KEY?.trim() || undefined,
+  langfuseSecretKey: process.env.LANGFUSE_SECRET_KEY?.trim() || undefined,
+  langfuseHost: process.env.LANGFUSE_HOST?.trim() || "http://localhost:3000",
+  // Temporal
+  temporalAddress: process.env.TEMPORAL_ADDRESS?.trim() || "localhost:7233",
+  temporalNamespace: process.env.TEMPORAL_NAMESPACE?.trim() || "default",
+  useTemporalWorker: parseBoolean(process.env.USE_TEMPORAL_WORKER, false),
 };
 
 export function ensureTracingDefaults(): void {

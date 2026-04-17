@@ -1,0 +1,56 @@
+services:
+  # ── Temporal ──────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:1.24
+    ports:
+      - "7233:7233"
+    environment:
+      - DB=sqlite
+    volumes:
+      - temporal-data:/etc/temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.26.2
+    ports:
+      - "8080:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    depends_on:
+      - temporal
+
+  # ── LiteLLM Proxy ─────────────────────────────────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    env_file:
+      - .env
+
+  # ── Langfuse ──────────────────────────────────────────────
+  langfuse-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db:/var/lib/postgresql/data
+
+  langfuse:
+    image: langfuse/langfuse:3
+    ports:
+      - "3000:3000"
+    depends_on:
+      - langfuse-db
+    environment:
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      NEXTAUTH_SECRET: changeme-secret
+      NEXTAUTH_URL: http://localhost:3000
+      SALT: changeme-salt
+
+volumes:
+  temporal-data:
+  langfuse-db:

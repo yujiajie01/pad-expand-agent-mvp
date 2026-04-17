@@ -10,13 +10,17 @@ import { Hono } from "hono";
 
 import { cors } from "hono/cors";
 
+import { randomUUID } from "node:crypto";
+
 import { appEnv, ensureTracingDefaults } from "./config/env";
 
 import { createAgentGraph } from "./graph/agentGraph";
 
-import { createInitialState } from "./graph/state";
+import { createInitialState, type AgentState } from "./graph/state";
 
 import { MemorySessionStore } from "./session/memoryStore";
+
+import { makeLangfuseCallback } from "./tracing/langfuse";
 
 ensureTracingDefaults();
 
@@ -27,7 +31,7 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "OPTIONS", "HEAD"],
-    allowHeaders: ["Content-Type", "ngrok-skip-browser-warning", "Accept", "X-Agent-Key"],
+    allowHeaders: ["Content-Type", "ngrok-skip-browser-warning", "Accept", "X-Agent-Key", "X-Request-Id"],
   }),
 );
 
@@ -84,23 +88,29 @@ app.post("/chat/turn", async (c) => {
     return c.json({ error: "会话不存在，请先调用 /chat/start。" }, 404);
   }
 
-  const nextState = await graph.invoke({
-    ...session.state,
-    latestUserInput: body.input,
-    userConfirmed: false,
-  });
+  const requestId = c.req.header("x-request-id") ?? randomUUID();
+  const invokeState = { ...session.state, latestUserInput: body.input, userConfirmed: false };
+
+  let nextState: AgentState;
+  if (appEnv.useTemporalWorker) {
+    const { runChatTurnWorkflow } = await import("./temporal/client");
+    nextState = await runChatTurnWorkflow(invokeState, requestId);
+  } else {
+    const cb = makeLangfuseCallback(requestId);
+    nextState = await graph.invoke(invokeState, cb ? { callbacks: [cb] } : undefined) as AgentState;
+  }
 
   store.updateState(session.id, nextState);
-  const reply = nextState.assistantReply;
 
   return c.json({
     sessionId: session.id,
     status: nextState.status,
-    reply,
+    reply: nextState.assistantReply,
     normalized: nextState.normalized,
     missingFields: nextState.missingFields,
     errors: nextState.errors,
     slots: nextState.slots,
+    requestId,
   });
 });
 
@@ -132,20 +142,26 @@ app.post("/chat/:sessionId/confirm", async (c) => {
     return c.json({ error: "会话不存在。" }, 404);
   }
 
-  const nextState = await graph.invoke({
-    ...session.state,
-    latestUserInput: "确认",
-    userConfirmed: false,
-  });
+  const requestId = c.req.header("x-request-id") ?? randomUUID();
+  const invokeState = { ...session.state, latestUserInput: "确认", userConfirmed: false };
+
+  let nextState: AgentState;
+  if (appEnv.useTemporalWorker) {
+    const { runChatTurnWorkflow } = await import("./temporal/client");
+    nextState = await runChatTurnWorkflow(invokeState, requestId);
+  } else {
+    const cb = makeLangfuseCallback(requestId);
+    nextState = await graph.invoke(invokeState, cb ? { callbacks: [cb] } : undefined) as AgentState;
+  }
 
   store.updateState(session.id, nextState);
-  const reply = nextState.assistantReply;
 
   return c.json({
     sessionId: session.id,
     status: nextState.status,
-    reply,
+    reply: nextState.assistantReply,
     normalized: nextState.normalized,
+    requestId,
   });
 });
 

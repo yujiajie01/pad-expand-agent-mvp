@@ -1,0 +1,22 @@
+model_list:
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://api.deepseek.com
+
+  # 备用：OpenAI 官方（取消注释即可启用）
+  # - model_name: gpt-4o-mini
+  #   litellm_params:
+  #     model: gpt-4o-mini
+  #     api_key: os.environ/OPENAI_API_KEY
+
+general_settings:
+  # 将请求日志发送到 Langfuse
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+
+litellm_settings:
+  langfuse_public_key: os.environ/LANGFUSE_PUBLIC_KEY
+  langfuse_secret_key: os.environ/LANGFUSE_SECRET_KEY
+  langfuse_host: os.environ/LANGFUSE_HOST
